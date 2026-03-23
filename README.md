@@ -1,56 +1,73 @@
 # Tradeflow API
 
-A professional-style trading REST API (similar to Zerodha/Kite) built with Spring Boot. Supports user registration, JWT auth, wallet, stocks, portfolio, orders, and trade history.
+Professional-style trading REST API (similar to Zerodha/Kite) built with Spring Boot.
 
 ## Tech Stack
 
-- **Java 21** · **Spring Boot 4** · **Spring Security** · **JPA** · **PostgreSQL**
-- **JWT** for authentication
-- **Swagger/OpenAPI 3** at `/swagger-ui.html`
+- Java 21
+- Spring Boot 4
+- Spring Security + JWT
+- Spring Data JPA (PostgreSQL)
+- Redis (ready for caching phase)
+- Swagger/OpenAPI
+- Docker + Docker Compose
 
-## Quick Start
+## Project Profiles
 
-1. **PostgreSQL**: Create database `tradeflow` and set credentials in `application.properties`.
-2. **Run**: `./mvnw spring-boot:run`
-3. **Docs**: Open http://localhost:8080/swagger-ui.html
-4. **Health**: GET http://localhost:8080/health
+- `dev` profile: local development defaults (`localhost`, SQL logs on)
+- `prod` profile: values from environment variables
 
-## API Overview
+Base config is in `application.properties`, and profile-specific config is in:
 
-### Public (no auth)
+- `src/main/resources/application-dev.properties`
+- `src/main/resources/application-prod.properties`
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/v1/auth/register` | Register (email, password) |
-| POST | `/api/v1/auth/login` | Login → returns JWT |
-| GET | `/health` | Health check |
+## Local Run (without Docker)
 
-### Protected (Header: `Authorization: Bearer <token>`)
+1. Ensure PostgreSQL is running.
+2. Set env vars (or rely on dev defaults).
+3. Run:
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/users/me` | Current user profile + balance |
-| POST | `/api/v1/users/me/fund` | Add funds to wallet |
-| GET | `/api/v1/wallet` | Wallet (available, locked, total) |
-| GET | `/api/v1/stocks` | List all stocks |
-| GET | `/api/v1/stocks/{id}` | Get stock by ID |
-| GET | `/api/v1/stocks/symbol/{symbol}` | Get stock by symbol |
-| POST | `/api/v1/stocks` | Create stock (body: symbol, name, price) |
-| GET | `/api/v1/portfolio` | Current holdings |
-| POST | `/api/v1/orders` | Place order (body: stockId, type, price, quantity) |
-| GET | `/api/v1/orders` | List orders (page, size, status?) |
-| GET | `/api/v1/orders/{id}` | Get order by ID |
-| POST | `/api/v1/orders/{id}/execute` | Execute pending order |
-| POST | `/api/v1/orders/{id}/cancel` | Cancel pending order |
-| GET | `/api/v1/trades` | Trade history (filled orders) |
+```bash
+./mvnw spring-boot:run
+```
 
-## Order Flow
+Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 
-1. **Place order** (BUY/SELL) → funds/shares validated; for BUY, amount is **locked**.
-2. **Execute** → settles: deducts cash and adds shares (BUY) or removes shares and adds cash (SELL).
-3. **Cancel** → only for PENDING; releases locked funds (BUY).
+## Docker Run (Phase 1)
 
-## Configuration
+1. Copy env template:
 
-- **JWT**: Set `app.jwt.secret` (min 256 bits) or env `JWT_SECRET`. Default expiration 24h.
-- **DB**: `spring.datasource.*` in `application.properties`.
+```bash
+cp .env.example .env
+```
+
+2. Start all services (app + postgres + redis):
+
+```bash
+docker compose up --build
+```
+
+3. Stop:
+
+```bash
+docker compose down
+```
+
+4. Stop and remove volumes (fresh DB):
+
+```bash
+docker compose down -v
+```
+
+## Environment Variables
+
+Defined in `.env.example`:
+
+- `SPRING_PROFILES_ACTIVE`
+- `APP_PORT`
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
+- `REDIS_PORT`
+- `JWT_SECRET`, `JWT_EXPIRATION_MS`
+
+Do not commit real secrets (`.env` is gitignored).
