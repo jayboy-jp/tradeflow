@@ -69,5 +69,14 @@ Defined in `.env.example`:
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
 - `REDIS_PORT`
 - `JWT_SECRET`, `JWT_EXPIRATION_MS`
+- `REFRESH_TOKEN_EXPIRATION_MS`
 
 Do not commit real secrets (`.env` is gitignored).
+
+## Phase 2 Security Hardening
+
+- Refresh-token based auth lifecycle:
+  - `POST /api/v1/auth/login` returns `accessToken` + `refreshToken`
+  - `POST /api/v1/auth/refresh` rotates refresh token and issues a new access token
+  - `POST /api/v1/auth/logout` revokes refresh token
+- Basic rate limiting on `/api/v1/auth/**` endpoints (per IP, in-memory window).

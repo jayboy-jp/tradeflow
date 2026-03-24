@@ -1,5 +1,6 @@
 package com.tradeflow.config;
 
+import com.tradeflow.security.AuthRateLimitFilter;
 import com.tradeflow.security.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,9 +14,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final AuthRateLimitFilter authRateLimitFilter;
     private final JwtAuthFilter jwtAuthFilter;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(AuthRateLimitFilter authRateLimitFilter, JwtAuthFilter jwtAuthFilter) {
+        this.authRateLimitFilter = authRateLimitFilter;
         this.jwtAuthFilter = jwtAuthFilter;
     }
 
@@ -32,6 +35,7 @@ public class SecurityConfig {
             )
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable())
+            .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

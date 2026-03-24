@@ -1,7 +1,8 @@
 package com.tradeflow.controller;
 
+import com.tradeflow.dto.AuthTokensResponse;
 import com.tradeflow.dto.LoginRequest;
-import com.tradeflow.dto.LoginResponse;
+import com.tradeflow.dto.RefreshTokenRequest;
 import com.tradeflow.dto.RegisterRequest;
 import com.tradeflow.dto.UserResponse;
 import com.tradeflow.entity.User;
@@ -10,7 +11,6 @@ import com.tradeflow.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,9 +22,6 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserService userService;
-
-    @Value("${app.jwt.expiration-ms:86400000}")
-    private long jwtExpirationMs;
 
     public AuthController(AuthService authService, UserService userService) {
         this.authService = authService;
@@ -39,10 +36,22 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Login and get JWT access token")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        String token = authService.login(request.email(), request.password());
-        return LoginResponse.of(token, jwtExpirationMs / 1000);
+    @Operation(summary = "Login and get access + refresh tokens")
+    public AuthTokensResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request.email(), request.password());
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "Refresh access token using refresh token")
+    public AuthTokensResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return authService.refreshAccessToken(request.refreshToken());
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Logout and revoke a refresh token")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.logout(request.refreshToken());
+        return ResponseEntity.noContent().build();
     }
 
     private UserResponse toUserResponse(User user) {

@@ -38,6 +38,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
+    @ExceptionHandler(RateLimitException.class)
+    public ResponseEntity<ApiError> handleRateLimit(RateLimitException ex, HttpServletRequest request) {
+        ApiError error = ApiError.of(
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                "RATE_LIMIT_EXCEEDED",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
         List<ApiError.FieldError> details = ex.getBindingResult().getFieldErrors().stream()

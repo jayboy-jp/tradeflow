@@ -44,6 +44,7 @@ services:
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-TradeflowApiSecretKeyForJwtSigningMustBeAtLeast256BitsLong}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      REFRESH_TOKEN_EXPIRATION_MS: ${REFRESH_TOKEN_EXPIRATION_MS:-604800000}
     ports:
       - "${APP_PORT:-8080}:8080"
     depends_on:
