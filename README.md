@@ -79,4 +79,15 @@ Do not commit real secrets (`.env` is gitignored).
   - `POST /api/v1/auth/login` returns `accessToken` + `refreshToken`
   - `POST /api/v1/auth/refresh` rotates refresh token and issues a new access token
   - `POST /api/v1/auth/logout` revokes refresh token
-- Basic rate limiting on `/api/v1/auth/**` endpoints (per IP, in-memory window).
+- Basic rate limiting on `/api/v1/auth/**` endpoints (per IP, Redis-backed window).
+
+## Phase 3 (Redis-backed)
+
+- Distributed auth rate limiting using Redis counters:
+  - `AUTH_RATE_LIMIT_MAX_REQUESTS`
+  - `AUTH_RATE_LIMIT_WINDOW_SECONDS`
+- Redis caching for stock read endpoints:
+  - `GET /api/v1/stocks`
+  - `GET /api/v1/stocks/{id}`
+  - `GET /api/v1/stocks/symbol/{symbol}`
+- Cache invalidation on stock creation.

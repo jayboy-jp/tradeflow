@@ -10,34 +10,25 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class AuthRateLimitFilter extends OncePerRequestFilter {
 
-    private static final int MAX_REQUESTS = 25;
-    private static final long WINDOW_SECONDS = 60;
+    private final RedisRateLimiterService redisRateLimiterService;
 
-    private final ConcurrentHashMap<String, WindowCounter> counters = new ConcurrentHashMap<>();
+    public AuthRateLimitFilter(RedisRateLimiterService redisRateLimiterService) {
+        this.redisRateLimiterService = redisRateLimiterService;
+    }
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
         if (isAuthEndpoint(request.getRequestURI())) {
-            String key = request.getRemoteAddr();
-            WindowCounter counter = counters.computeIfAbsent(key, k -> new WindowCounter());
-            synchronized (counter) {
-                long now = Instant.now().getEpochSecond();
-                if (now - counter.windowStartEpochSeconds >= WINDOW_SECONDS) {
-                    counter.windowStartEpochSeconds = now;
-                    counter.count.set(0);
-                }
-                if (counter.count.incrementAndGet() > MAX_REQUESTS) {
-                    throw new RateLimitException("Too many auth requests. Try again in a minute.");
-                }
+            String clientIp = request.getRemoteAddr();
+            boolean allowed = redisRateLimiterService.allowAuthRequest(clientIp);
+            if (!allowed) {
+                throw new RateLimitException("Too many auth requests. Try again in a minute.");
             }
         }
         filterChain.doFilter(request, response);
@@ -45,10 +36,5 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     private boolean isAuthEndpoint(String uri) {
         return uri != null && uri.startsWith("/api/v1/auth/");
-    }
-
-    private static class WindowCounter {
-        private long windowStartEpochSeconds = Instant.now().getEpochSecond();
-        private final AtomicInteger count = new AtomicInteger(0);
     }
 }
