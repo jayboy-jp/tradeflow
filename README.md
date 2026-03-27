@@ -91,3 +91,16 @@ Do not commit real secrets (`.env` is gitignored).
   - `GET /api/v1/stocks/{id}`
   - `GET /api/v1/stocks/symbol/{symbol}`
 - Cache invalidation on stock creation.
+
+## Phase 4 (Real-time)
+
+- Server-sent events (SSE) for order status updates.
+- Endpoint (authenticated):
+  - `GET /api/v1/stream/orders`
+
+When you call:
+- `POST /api/v1/orders` (place)
+- `POST /api/v1/orders/{id}/execute` (execute)
+- `POST /api/v1/orders/{id}/cancel` (cancel)
+
+the server pushes `order` events to your SSE stream.

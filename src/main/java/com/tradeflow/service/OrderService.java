@@ -19,18 +19,21 @@ public class OrderService {
     private final StockRepository stockRepository;
     private final PortfolioRepository portfolioRepository;
     private final WalletRepository walletRepository;
+    private final OrderRealtimeStreamService orderRealtimeStreamService;
 
     public OrderService(OrderRepository orderRepository,
                         UserRepository userRepository,
                         StockRepository stockRepository,
                         PortfolioRepository portfolioRepository,
-                        WalletRepository walletRepository) {
+                        WalletRepository walletRepository,
+                        OrderRealtimeStreamService orderRealtimeStreamService) {
 
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.stockRepository = stockRepository;
         this.portfolioRepository = portfolioRepository;
         this.walletRepository = walletRepository;
+        this.orderRealtimeStreamService = orderRealtimeStreamService;
     }
 
     /**
@@ -78,7 +81,9 @@ public class OrderService {
         }
 
         Order order = new Order(user, stock, type, price, quantity, OrderStatus.PENDING);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        orderRealtimeStreamService.publishOrderUpdate(userId, "PLACED", saved);
+        return saved;
     }
 
     /**
@@ -144,7 +149,9 @@ public class OrderService {
         order.setStatus(OrderStatus.FILLED);
 
         walletRepository.save(wallet);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        orderRealtimeStreamService.publishOrderUpdate(user.getId(), "EXECUTED", saved);
+        return saved;
     }
 
     /**
@@ -173,7 +180,9 @@ public class OrderService {
         }
 
         order.setStatus(OrderStatus.CANCELLED);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        orderRealtimeStreamService.publishOrderUpdate(order.getUser().getId(), "CANCELLED", saved);
+        return saved;
     }
 
     public Order getOrderById(Long orderId, Long userId) {
