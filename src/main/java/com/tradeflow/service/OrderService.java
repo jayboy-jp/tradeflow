@@ -109,6 +109,12 @@ public class OrderService {
                 .multiply(BigDecimal.valueOf(order.getQuantity()));
 
         if (order.getType() == OrderType.BUY) {
+            if (stock.getCurrentPrice().compareTo(order.getPrice()) > 0) {
+                throw new BusinessException(
+                        "ORDER_PRICE_NOT_REACHED",
+                        "BUY order cannot execute until market price is at or below order price"
+                );
+            }
 
             wallet.setLockedBalance(wallet.getLockedBalance().subtract(totalAmount));
             wallet.setTotalBalance(wallet.getTotalBalance().subtract(totalAmount));
@@ -126,6 +132,12 @@ public class OrderService {
             portfolioRepository.save(portfolio);
 
         } else { // SELL
+            if (stock.getCurrentPrice().compareTo(order.getPrice()) < 0) {
+                throw new BusinessException(
+                        "ORDER_PRICE_NOT_REACHED",
+                        "SELL order cannot execute until market price is at or above order price"
+                );
+            }
 
             Portfolio portfolio = portfolioRepository
                     .findByUserAndStock(user, stock)
@@ -208,5 +220,25 @@ public class OrderService {
 
     public Page<Order> getFilledOrdersByUser(User user, Pageable pageable) {
         return orderRepository.findByUserAndStatusOrderByIdDesc(user, OrderStatus.FILLED, pageable);
+    }
+
+    /**
+     * Executes pending orders that became eligible after a market price update.
+     */
+    @Transactional
+    public void executeEligiblePendingOrdersForStock(Long stockId) {
+        Stock stock = stockRepository.findById(stockId)
+                .orElseThrow(() -> new BusinessException("STOCK_NOT_FOUND", "Stock not found"));
+
+        List<Order> pendingOrders = orderRepository.findByStockAndStatusOrderByIdAsc(stock, OrderStatus.PENDING);
+        for (Order pending : pendingOrders) {
+            boolean eligible =
+                    (pending.getType() == OrderType.BUY && stock.getCurrentPrice().compareTo(pending.getPrice()) <= 0)
+                            || (pending.getType() == OrderType.SELL && stock.getCurrentPrice().compareTo(pending.getPrice()) >= 0);
+
+            if (eligible) {
+                executeOrder(pending.getId());
+            }
+        }
     }
 }

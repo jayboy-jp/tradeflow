@@ -2,6 +2,7 @@ package com.tradeflow.repository;
 
 import com.tradeflow.entity.Order;
 import com.tradeflow.entity.OrderStatus;
+import com.tradeflow.entity.Stock;
 import com.tradeflow.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,4 +17,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUserAndStatus(User user, OrderStatus status);
 
     Page<Order> findByUserAndStatusOrderByIdDesc(User user, OrderStatus status, Pageable pageable);
+
+    List<Order> findByStockAndStatusOrderByIdAsc(Stock stock, OrderStatus status);
 }

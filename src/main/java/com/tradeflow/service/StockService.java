@@ -6,6 +6,7 @@ import com.tradeflow.repository.StockRepository;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -14,9 +15,11 @@ import java.util.List;
 public class StockService {
 
     private final StockRepository stockRepository;
+    private final OrderService orderService;
 
-    public StockService(StockRepository stockRepository) {
+    public StockService(StockRepository stockRepository, OrderService orderService) {
         this.stockRepository = stockRepository;
+        this.orderService = orderService;
     }
 
     @CacheEvict(cacheNames = {"stocks:list", "stocks:byId", "stocks:bySymbol"}, allEntries = true)
@@ -42,5 +45,18 @@ public class StockService {
     public Stock getBySymbol(String symbol) {
         return stockRepository.findBySymbol(symbol)
                 .orElseThrow(() -> new BusinessException("STOCK_NOT_FOUND", "Stock not found: " + symbol));
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"stocks:list", "stocks:byId", "stocks:bySymbol"}, allEntries = true)
+    public Stock updateCurrentPrice(Long id, BigDecimal newPrice) {
+        Stock stock = stockRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("STOCK_NOT_FOUND", "Stock not found"));
+        stock.setCurrentPrice(newPrice);
+        Stock saved = stockRepository.save(stock);
+
+        // Trigger matching for pending orders eligible at this new market price.
+        orderService.executeEligiblePendingOrdersForStock(saved.getId());
+        return saved;
     }
 }

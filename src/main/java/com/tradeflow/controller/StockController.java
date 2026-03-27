@@ -2,6 +2,7 @@ package com.tradeflow.controller;
 
 import com.tradeflow.dto.StockResponse;
 import com.tradeflow.dto.CreateStockRequest;
+import com.tradeflow.dto.UpdateStockPriceRequest;
 import com.tradeflow.entity.Stock;
 import com.tradeflow.service.StockService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,6 +50,13 @@ public class StockController {
     public ResponseEntity<StockResponse> createStock(@Valid @RequestBody CreateStockRequest request) {
         Stock stock = stockService.createStock(request.symbol(), request.name(), request.price());
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(stock));
+    }
+
+    @PatchMapping("/{id}/price")
+    @Operation(summary = "Update stock market price and auto-match eligible pending orders")
+    public StockResponse updatePrice(@PathVariable Long id, @Valid @RequestBody UpdateStockPriceRequest request) {
+        Stock updated = stockService.updateCurrentPrice(id, request.price());
+        return toResponse(updated);
     }
 
     private StockResponse toResponse(Stock s) {

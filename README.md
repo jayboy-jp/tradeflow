@@ -104,3 +104,12 @@ When you call:
 - `POST /api/v1/orders/{id}/cancel` (cancel)
 
 the server pushes `order` events to your SSE stream.
+
+## Phase 5 (Price-aware execution)
+
+- `executeOrder` now enforces limit-price conditions:
+  - BUY executes only when `marketPrice <= order.price`
+  - SELL executes only when `marketPrice >= order.price`
+- Added stock price update endpoint:
+  - `PATCH /api/v1/stocks/{id}/price`
+- On stock price updates, eligible pending orders are auto-executed.
