@@ -113,3 +113,39 @@ the server pushes `order` events to your SSE stream.
 - Added stock price update endpoint:
   - `PATCH /api/v1/stocks/{id}/price`
 - On stock price updates, eligible pending orders are auto-executed.
+
+## Phase 6 (Observability)
+
+- Added Spring Boot Actuator and Prometheus registry.
+- Exposed monitoring endpoints:
+  - `GET /actuator/health`
+  - `GET /actuator/info`
+  - `GET /actuator/metrics`
+  - `GET /actuator/prometheus`
+- Added request correlation filter:
+  - Accepts/sets `X-Request-ID`
+  - Includes `requestId` in log lines for request tracing.
+
+## Phase 7 (Grafana + Prometheus)
+
+- Added Prometheus service (Docker Compose) with scrape config:
+  - `monitoring/prometheus.yml`
+  - Scrapes `app:8080/actuator/prometheus`
+- Added Grafana service (Docker Compose).
+- New environment variables in `.env.example`:
+  - `PROMETHEUS_PORT`, `GRAFANA_PORT`
+  - `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`
+
+### Access URLs
+
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3000`
+  - default login from env (`admin` / `admin` unless changed)
+
+### Grafana datasource setup (first time)
+
+1. Open Grafana and login.
+2. Go to **Connections > Data sources > Add data source**.
+3. Choose **Prometheus**.
+4. URL: `http://prometheus:9090` (from inside Docker network).
+5. Save & test.
