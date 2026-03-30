@@ -29,6 +29,23 @@ services:
       timeout: 5s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: tradeflow-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   app:
     build:
       context: .
@@ -42,18 +59,27 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
       CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-300}
       JWT_SECRET: ${JWT_SECRET:-TradeflowApiSecretKeyForJwtSigningMustBeAtLeast256BitsLong}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       REFRESH_TOKEN_EXPIRATION_MS: ${REFRESH_TOKEN_EXPIRATION_MS:-604800000}
       AUTH_RATE_LIMIT_MAX_REQUESTS: ${AUTH_RATE_LIMIT_MAX_REQUESTS:-25}
       AUTH_RATE_LIMIT_WINDOW_SECONDS: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:-60}
+      ORDER_EXCHANGE: ${ORDER_EXCHANGE:-tradeflow.order.exchange}
+      ORDER_QUEUE: ${ORDER_QUEUE:-tradeflow.order.execution.queue}
+      ORDER_ROUTING_KEY: ${ORDER_ROUTING_KEY:-tradeflow.order.execute}
     ports:
       - "${APP_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     restart: unless-stopped
 
@@ -88,5 +114,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  rabbitmq_data:
   prometheus_data:
   grafana_data:

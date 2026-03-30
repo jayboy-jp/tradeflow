@@ -3,8 +3,10 @@ package com.tradeflow.controller;
 import com.tradeflow.dto.OrderResponse;
 import com.tradeflow.dto.PageResponse;
 import com.tradeflow.dto.PlaceOrderRequest;
+import com.tradeflow.dto.AsyncAcceptedResponse;
 import com.tradeflow.entity.Order;
 import com.tradeflow.entity.OrderStatus;
+import com.tradeflow.messaging.OrderExecutionPublisher;
 import com.tradeflow.security.SecurityUtils;
 import com.tradeflow.service.OrderService;
 import com.tradeflow.service.UserService;
@@ -26,10 +28,14 @@ public class OrderController {
 
     private final OrderService orderService;
     private final UserService userService;
+    private final OrderExecutionPublisher orderExecutionPublisher;
 
-    public OrderController(OrderService orderService, UserService userService) {
+    public OrderController(OrderService orderService,
+                           UserService userService,
+                           OrderExecutionPublisher orderExecutionPublisher) {
         this.orderService = orderService;
         this.userService = userService;
+        this.orderExecutionPublisher = orderExecutionPublisher;
     }
 
     @PostMapping
@@ -87,6 +93,15 @@ public class OrderController {
         Order order = orderService.getOrderById(id, userId);
         order = orderService.executeOrder(order.getId());
         return toResponse(order);
+    }
+
+    @PostMapping("/{id}/execute-async")
+    @Operation(summary = "Queue a pending order for asynchronous execution")
+    public ResponseEntity<AsyncAcceptedResponse> executeOrderAsync(@PathVariable Long id) {
+        Long userId = SecurityUtils.requireCurrentUserId();
+        Order order = orderService.getOrderById(id, userId);
+        orderExecutionPublisher.enqueueExecution(order.getId());
+        return ResponseEntity.accepted().body(AsyncAcceptedResponse.accepted(order.getId()));
     }
 
     @PostMapping("/{id}/cancel")

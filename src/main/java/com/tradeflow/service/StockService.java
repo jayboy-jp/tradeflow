@@ -2,6 +2,7 @@ package com.tradeflow.service;
 
 import com.tradeflow.entity.Stock;
 import com.tradeflow.exception.BusinessException;
+import com.tradeflow.messaging.OrderExecutionPublisher;
 import com.tradeflow.repository.StockRepository;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -16,10 +17,14 @@ public class StockService {
 
     private final StockRepository stockRepository;
     private final OrderService orderService;
+    private final OrderExecutionPublisher orderExecutionPublisher;
 
-    public StockService(StockRepository stockRepository, OrderService orderService) {
+    public StockService(StockRepository stockRepository,
+                        OrderService orderService,
+                        OrderExecutionPublisher orderExecutionPublisher) {
         this.stockRepository = stockRepository;
         this.orderService = orderService;
+        this.orderExecutionPublisher = orderExecutionPublisher;
     }
 
     @CacheEvict(cacheNames = {"stocks:list", "stocks:byId", "stocks:bySymbol"}, allEntries = true)
@@ -55,8 +60,10 @@ public class StockService {
         stock.setCurrentPrice(newPrice);
         Stock saved = stockRepository.save(stock);
 
-        // Trigger matching for pending orders eligible at this new market price.
-        orderService.executeEligiblePendingOrdersForStock(saved.getId());
+        // Queue matching for eligible pending orders at this new market price.
+        for (Long orderId : orderService.findEligiblePendingOrderIdsForStock(saved.getId())) {
+            orderExecutionPublisher.enqueueExecution(orderId);
+        }
         return saved;
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -226,19 +227,21 @@ public class OrderService {
      * Executes pending orders that became eligible after a market price update.
      */
     @Transactional
-    public void executeEligiblePendingOrdersForStock(Long stockId) {
+    public List<Long> findEligiblePendingOrderIdsForStock(Long stockId) {
         Stock stock = stockRepository.findById(stockId)
                 .orElseThrow(() -> new BusinessException("STOCK_NOT_FOUND", "Stock not found"));
 
         List<Order> pendingOrders = orderRepository.findByStockAndStatusOrderByIdAsc(stock, OrderStatus.PENDING);
+        List<Long> eligibleOrderIds = new ArrayList<>();
         for (Order pending : pendingOrders) {
             boolean eligible =
                     (pending.getType() == OrderType.BUY && stock.getCurrentPrice().compareTo(pending.getPrice()) <= 0)
                             || (pending.getType() == OrderType.SELL && stock.getCurrentPrice().compareTo(pending.getPrice()) >= 0);
 
             if (eligible) {
-                executeOrder(pending.getId());
+                eligibleOrderIds.add(pending.getId());
             }
         }
+        return eligibleOrderIds;
     }
 }

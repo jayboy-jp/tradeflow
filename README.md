@@ -149,3 +149,17 @@ the server pushes `order` events to your SSE stream.
 3. Choose **Prometheus**.
 4. URL: `http://prometheus:9090` (from inside Docker network).
 5. Save & test.
+
+## Phase 8 (Async execution with RabbitMQ)
+
+- Added RabbitMQ message broker service in Docker Compose.
+- Added async order execution queue:
+  - exchange: `tradeflow.order.exchange`
+  - queue: `tradeflow.order.execution.queue`
+  - routing key: `tradeflow.order.execute`
+- New endpoint:
+  - `POST /api/v1/orders/{id}/execute-async`
+  - returns `202 Accepted` and queues execution.
+- Stock price updates now queue eligible pending orders for async execution.
+- RabbitMQ management UI:
+  - `http://localhost:15672` (default `guest/guest` unless changed in `.env`).
