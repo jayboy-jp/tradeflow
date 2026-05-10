@@ -8,10 +8,12 @@ import com.tradeflow.repository.WalletRepository;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
 @Service
+@Transactional
 public class UserService {
 
     private final UserRepository userRepository;
